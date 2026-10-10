@@ -122,7 +122,7 @@ function setSem(s){
 }
 function card(x,t){
   const st=at(t,x.slot),en=at(t,x.slot,1),now=Date.now(),pa=now>=en,cu=!pa&&now>=st,k=K[x.kind]||K.other,i=LS.push({x,t})-1;
-  const loc=x.complex?"несколько кабинетов":x.kind=="other"&&/^Спорт/.test(x.room||"")?"спорткомплекс":x.remote?"дистанционно":x.building?`${x.building}-${x.room}`:(x.room||"");
+  const loc=x.complex?"несколько кабинетов":x.kind=="other"&&/^Спорт/.test(x.room||"")?"спорткомплекс":x.remote?x.room:x.building?`${x.building}-${x.room}`:(x.room||"");
   const mid=x.option?"По выбору":x.subgroup?`Подгруппа №${x.subgroup}${x.subgroup_inferred?"?":""}`:"";
   return `<div class="card ${pa?"past":""} ${cu?"cur":""}" style="--k:${k[1]}" onclick="info(${i})">
   <div class="r1"><span class="n">${x.slot}</span><span class="t">${lab(x.slot)}</span><span class="sp"></span>${mid?`<span>${mid}</span><span class="sp"></span>`:""}${x.teacher&&x.kind!="other"?`<span class="pr">${E(fmtN(x.teacher))}</span>`:""}</div>
@@ -148,7 +148,7 @@ function centerStrip(smooth){const b=strip.querySelector(`[data-w="${wk}"]`);if(
 function closeMenu(){$("menu").classList.remove("open");$("mb").classList.remove("on")}
 function head(){
   mark();if(!CAL)return;
-  $("menu").innerHTML=`<button onclick="toToday()">📅 Сегодня</button><button onclick="pickGroup()">🎓 Сменить группу</button>`+[["Все подгруппы",0],["Подгруппа №1",1],["Подгруппа №2",2]].map(o=>`<button class="${sub==o[1]?"on":""}" onclick="setSub(${o[1]})">${sub==o[1]?"✓ ":""}${o[0]}</button>`).join("")+(code?`<button onclick="toggleFav(code)">${FAV.includes(code)?"★ Убрать из избранного":"☆ В избранное"}</button>`:"")+`<button onclick="contributors()">👥 Contributors</button>`+(G&&G.site_updated?`<div class="ft">Сайт вуза обновлён ${G.site_updated}</div>`:"");
+  $("menu").innerHTML=`<button onclick="toToday()">📅 Сегодня</button>`+[["Все подгруппы",0],["Подгруппа №1",1],["Подгруппа №2",2]].map(o=>`<button class="${sub==o[1]?"on":""}" onclick="setSub(${o[1]})">${sub==o[1]?"✓ ":""}${o[0]}</button>`).join("")+`<button onclick="contributors()">👥 Contributors</button>`+(G&&G.site_updated?`<div class="ft">Сайт вуза обновлён ${G.site_updated}</div>`:"");
 }
 function show(w,smooth){wk=Math.min(TOTAL,Math.max(1,w));mark();pLock=Date.now()+(smooth?650:150);pager.scrollTo({left:(wk-1)*pager.clientWidth,behavior:smooth?"smooth":"auto"})}
 function toDay(w,smooth){const p=$("w"+w),t=p.querySelector(".today");p.scrollTo({top:t?t.offsetTop-6:0,behavior:smooth?"smooth":"auto"})}
@@ -171,7 +171,7 @@ function info(i){
   openSheet((k[0]?`<span class="tag">${k[0]}</span>`:"")+`<h2>${E(x.title)}</h2>`+tc
    +(x.complex?r("Как написано на сайте",`<pre class="raw">${E(x.raw)}</pre>`):"")
    +r("Дата",ds)+r("Время",`${lab(x.slot)} · ${x.slot}-я пара`)
-   +(x.complex?r("Кабинеты",E((x.rooms||[]).join(", "))):(x.building?r("Корпус",E(x.building)):"")+r("Кабинет",x.remote?"Дистанционно":E(x.room||"—")))
+   +(x.complex?r("Кабинеты",E((x.rooms||[]).join(", "))):(x.building?r("Корпус",E(x.building)):"")+r("Кабинет",E(x.room||"—")))
    +(x.equip?r("Оснащение",EQ[x.equip]||E(x.equip)):"")
    +(x.subgroup?r("Подгруппа","№"+x.subgroup+(x.subgroup_inferred?" (определена по порядку записи, может быть неточно)":"")):"")
    +(x.option?r("Выбор","Один из предметов по выбору"):""));
