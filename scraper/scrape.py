@@ -19,14 +19,14 @@ DELAY = float(os.environ.get("DELAY", "0.4"))   # pauza mezhdu zaprosami, sek
 def fetch(url: str):
     # vozvrashchaet (telo stranitsy, zagolovok Last-Modified)
     last = None
-    for attempt in range(3):
+    for attempt in range(4):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": UA})
             with urllib.request.urlopen(req, timeout=30) as r:
                 return r.read(), r.headers.get("Last-Modified")
         except Exception as e:                      # noqa: BLE001
             last = e
-            time.sleep(2 * (attempt + 1))
+            time.sleep((5, 15, 45, 0)[attempt])      # chem dalshe tem dolshe zhdem
     raise last
 
 
@@ -60,7 +60,12 @@ def audit(lessons):
 
 
 def main() -> int:
-    index = parse_index(fetch(BASE + "raspisan.htm")[0])
+    try:
+        index = parse_index(fetch(BASE + "raspisan.htm")[0])
+    except Exception as e:                          # noqa: BLE001
+        print(f"Не удалось открыть главную страницу портала: {e!r}")
+        print("Данные в репозитории не тронуты, можно просто запустить позже.")
+        return 1
     if len(index) < 50:                             # stranitsa slomana - nichego ne trogaem
         print(f"ОШИБКА: на главной найдено только {len(index)} групп, прерываю")
         return 1
@@ -68,6 +73,7 @@ def main() -> int:
     (DATA / "groups").mkdir(parents=True, exist_ok=True)
     changed, failed, kept_old = [], [], []
     unparsed, inferred, equip_seen = [], 0, {}
+    streak, ok_count = 0, 0                         # oshibok podryad / uspeshno razobrannyh grupp
     sus = {}                                        # prichina -> {tekst kletki: [skolko grupp, primer]}
 
     for i, g in enumerate(index, 1):
@@ -78,13 +84,19 @@ def main() -> int:
             new = parse_group(body, g["code"], last_mod)
             new["name"] = g["name"]
         except Exception as e:                      # noqa: BLE001
+            streak += 1
             failed.append({"code": g["code"], "name": g["name"], "error": repr(e)})
             print(f"[{i}/{len(index)}] {g['code']} {g['name']}: ОШИБКА {e!r}")
             if len(failed) <= 3:
                 traceback.print_exc()                # podrobnosti tolko dlya pervyh oshibok
+            if streak >= 8:                          # sayt lezhit - ne dolbim ego zrya
+                print("8 ошибок подряд, останавливаюсь: сайт, похоже, недоступен.")
+                break
             continue
         finally:
             time.sleep(DELAY)
+        streak = 0
+        ok_count += 1
 
         if old and len(old["lessons"]) >= 4 and len(new["lessons"]) < len(old["lessons"]) / 2:
             kept_old.append({"code": g["code"], "name": g["name"],
@@ -107,8 +119,11 @@ def main() -> int:
             path.write_text(dump(new), encoding="utf-8")
             changed.append(g["code"])
 
-    ok = len(index) - len(failed)
-    report = {"groups_total": len(index), "groups_ok": ok, "failed": failed,
+    ok = ok_count
+    if ok < 0.8 * len(index):                       # progon neudachnyy - report i status ne perezapisyvaem
+        print(f"Разобрано только {ok} из {len(index)} групп, общий отчёт не обновляю.")
+        return 1
+    report = {"groups_total": len(index), "groups_ok": ok, "failed": failed, "not_checked": len(index) - ok - len(failed),
               "kept_old_data": kept_old, "unparsed_cells": unparsed,
               "subgroups_guessed_by_order": inferred, "equipment_codes": equip_seen,
               "suspicious": {why: {"distinct": len(d), "top": [
