@@ -38,24 +38,26 @@ def audit(lessons):
     # ishchem podozritelnye pary: razbor ne upal, no rezultat mozhet byt krivym
     # vozvrashchaet spisok (prichina, ishodnyy tekst kletki)
     out = []
-    cells = {}
     for l in lessons:
-        cells.setdefault((l["week"], l["day"], l["slot"], l["raw"]), []).append(l)
-    for (_, _, _, raw), ls in cells.items():
-        if len(ls) > 2:
-            out.append(("many_segments", raw))      # v kletke bolshe dvuh podgrupp
-    for l in lessons:
+        if l.get("complex"):
+            out.append(("complex", l["raw"]))           # yazykovaya kasha - ne razobrali, tolko raw
+            continue
         title = l.get("title") or ""
-        if l["kind"] != "other" and not l.get("teacher"):
+        exempt = re.match(r"(Военная кафедра|Физическая культура|ЭК по ФКС)", title)
+        if l["kind"] != "other" and not l.get("teacher") and not exempt:
             out.append(("no_teacher", l["raw"]))
         if len(title) < 3:
             out.append(("no_title", l["raw"]))
-        elif re.search(r"п/г|а\.", title) or re.fullmatch(r"[\d\W]+", title):
-            out.append(("dirty_title", l["raw"]))   # v nazvanie popal musor
+        elif re.search(r"п/г|(?<!\w)а\.", title) or re.fullmatch(r"[\d\W]+", title):
+            out.append(("dirty_title", l["raw"]))       # v nazvanie popal musor
         if l["kind"] == "other":
-            out.append(("kind_other", l["raw"]))    # net lek/lab/pr - smotrim kakie byvayut
+            out.append(("kind_other", l["raw"]))        # net lek/lab/pr - smotrim kakie byvayut
         if l.get("subgroup_inferred"):
-            out.append(("guessed_subgroups", l["raw"]))
+            out.append(("guessed_subgroups", l["raw"])) # podgruppy ugadany po poryadku
+        if l.get("option"):
+            out.append(("elective_options", l["raw"]))  # dva raznyh predmeta po vyboru
+        if l.get("room") and not l.get("remote") and not re.fullmatch(r"[\dА-Яа-яA-Za-z.\-]+", l["room"]):
+            out.append(("odd_room", l["raw"]))
     return out
 
 

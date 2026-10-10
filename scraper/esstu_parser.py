@@ -19,13 +19,17 @@ except ImportError:
 
 BASE = "https://portal.esstu.ru/bakalavriat/"
 KINDS = {"лек": "lecture", "лаб": "lab", "пр": "practice"}
-EQUIP = {"д/к": "display", "и/д": "board", "л": "л"}   # kod "el" (kirillitsa) - chto eto znachit poka ne znayu, ostavil kak est
+EQUIP = {"д/к": "display", "и/д": "board", "л": "lecture_hall", "и/п": "и/п"}   # "l" - bolshoy lektsionnyy kabinet; "i/p" - smysl ne znayu, ostavil kak est
 EMPTY = re.compile(r"^[\s_\-–—]*$")
+ONLINE = ("дист", "online", "онлайн")
 
-# primery: a.25-214 d/k   |   a.9-Sport1   |   a.dist./ob.   |   a.25-115 l
-ROOM = re.compile(r"а\.\s*(\S+)(?:\s+(д/к|и/д|л)(?=\s|$))?")
-# FAMILIYA I.O. (i neobyazatelnyy " -" posle nee)
-TEACHER = re.compile(r"([А-ЯЁ]{2,}(?:-[А-ЯЁ]{2,})?\s+[А-ЯЁ]\.\s?[А-ЯЁ]\.)\s*-?\s*$")
+# primery: a.25-214 d/k | a.9-Sport1 | a.dist./ob. | a.25-115 l | a.640i/d (bez probela)
+# pered "a." ne dolzhno byt bukvy, inache lovim konets slova ("Elektronika. Kursovaya")
+ROOM = re.compile(r"(?<!\w)а\.\s*(\S+)(?:\s+(д/к|и/д|и/п|л)(?=[\s\-]|$))?")
+# FAMILIYA I.O. - inogda initsialy slepleny ("S.BM."), inogda pripisano "FIZ.", est i "VAKANSIYA"
+NAME = r"[А-ЯЁ]{2,}(?:-[А-ЯЁ]{2,})?\s+[А-ЯЁ]\.\s?[А-ЯЁ]{1,2}\."
+TEACHER = re.compile(rf"({NAME}|ВАКАНСИЯ)(?:[А-ЯЁ]{{2,}}\.|\s[А-ЯЁ]{{2,}})?\s*-?\s*$")
+TEACHER_ANY = re.compile(rf"({NAME}|ВАКАНСИЯ)(?:[А-ЯЁ]{{2,}}\.)?")
 SUBGROUP = re.compile(r"\s*-\s*(\d)\s*п/г\s*$")
 
 
@@ -72,12 +76,53 @@ def parse_index(html: bytes):
 
 # ---------------------------------------------------------------- odna kletka
 def _room(token: str, equip: str | None):
-    if token.lower().startswith("дист"):
-        return {"building": None, "room": "дист.", "remote": True,
-                "equip": EQUIP.get(equip)}
+    token = token.rstrip("-")
+    for code in ("д/к", "и/д", "и/п"):           # oborudovanie mozhet prilipnut k nomeru
+        if token.endswith(code) and len(token) > len(code):
+            token, equip = token[:-len(code)], equip or code
+    eq = EQUIP.get(equip, equip) if equip else None
+    if token.lower().startswith(ONLINE):
+        return {"building": None, "room": "дист.", "remote": True, "equip": eq}
     b, _, r = token.partition("-")
-    return {"building": b if r else None, "room": r or b, "remote": False,
-            "equip": EQUIP.get(equip)}
+    return {"building": b if r else None, "room": r or b, "remote": False, "equip": eq}
+
+
+def _head(seg: str):
+    # razbiraet "NAZVANIE [- N p/g] PREPOD" -> (nazvanie, prepod, podgruppa, yavnaya_li)
+    teacher = None
+    tm = TEACHER.search(seg)
+    if tm:
+        teacher = re.sub(r"\s+", " ", tm.group(1))
+        seg = seg[:tm.start()].strip()
+    sub, explicit = None, False
+    sm = SUBGROUP.search(seg)
+    if sm:
+        sub, explicit, seg = int(sm.group(1)), True, seg[:sm.start()].strip()
+    return seg.rstrip(" -"), teacher, sub, explicit
+
+
+def _many(kind: str, body: str, rooms, text: str):
+    # bolshe dvuh auditoriy v kletke. dva varianta:
+    #   1) parallelnye spiski "PREPOD1 a.R1 PREPOD2 PREPOD3 - a.R2- a.R3" - skladyvaem po poryadku
+    #   2) yazykovaya kasha (raznye nazvaniya, spiski raznoy dliny, tekst obrezan saytom) - ne razbiraem,
+    #      pomechaem complex i ostavlyaem raw, prilozhenie pokazhet tekst kak est
+    title, teacher, _, _ = _head(body[:rooms[0].start()])
+    mid = body[rooms[0].end():rooms[1].start()]
+    names = list(TEACHER_ANY.finditer(mid))
+    rest = rooms[1:]
+    ok = bool(teacher and title and names and len(names) == len(rest))
+    if ok and mid[:names[0].start()].strip(" -"):
+        ok = False                                  # pered familiyami stoyat nazvaniya
+    if ok:
+        pairs = [(teacher, rooms[0])] + [(n.group(1), r) for n, r in zip(names, rest)]
+        return [{"kind": kind, "title": title, "teacher": re.sub(r"\s+", " ", t),
+                 "subgroup": i + 1, "subgroup_explicit": False, "subgroup_inferred": True,
+                 **_room(rm.group(1), rm.group(2)), "raw": text}
+                for i, (t, rm) in enumerate(pairs)]
+    return [{"kind": kind, "title": title or body[:rooms[0].start()].strip(), "teacher": None,
+             "subgroup": None, "subgroup_explicit": False, "building": None, "room": None,
+             "remote": False, "equip": None, "complex": True,
+             "rooms": [r.group(1).rstrip("-") for r in rooms], "raw": text}]
 
 
 def parse_cell(text: str):
@@ -92,21 +137,17 @@ def parse_cell(text: str):
     if m:
         kind, body = KINDS[m.group(1)], m.group(2)
 
-    out, pos, prev_title = [], 0, None
     rooms = list(ROOM.finditer(body))
-    for idx, rm in enumerate(rooms):
+    if len(rooms) > 2:
+        return _many(kind, body, rooms, text)
+
+    out, pos, prev_title, own_title = [], 0, None, []
+    for rm in rooms:
         seg = body[pos:rm.start()].strip()
         pos = rm.end()
-        teacher = None
-        tm = TEACHER.search(seg)
-        if tm:
-            teacher = re.sub(r"\s+", " ", tm.group(1))
-            seg = seg[:tm.start()].strip()
-        sub, explicit = None, False
-        sm = SUBGROUP.search(seg)
-        if sm:
-            sub, explicit, seg = int(sm.group(1)), True, seg[:sm.start()].strip()
-        title = seg.rstrip(" -") or prev_title
+        title, teacher, sub, explicit = _head(seg)
+        own_title.append(bool(title))
+        title = title or prev_title
         prev_title = title
         out.append({"kind": kind, "title": title, "teacher": teacher,
                     "subgroup": sub, "subgroup_explicit": explicit,
@@ -117,11 +158,15 @@ def parse_cell(text: str):
                  "subgroup_explicit": False, "building": None, "room": None,
                  "remote": False, "equip": None, "raw": text, "unparsed": True}]
 
-    # dve podgruppy bez pometok: sleva napravo = 1-ya, 2-ya (ugadyvaem po poryadku)
-    # vnimanie: poryadok ne vsegda verny (u 564-2 putalsya), nuzhny ruchnye popravki
     if len(out) == 2 and not any(o["subgroup_explicit"] for o in out):
-        out[0]["subgroup"], out[1]["subgroup"] = 1, 2
-        out[0]["subgroup_inferred"] = out[1]["subgroup_inferred"] = True
+        if own_title[1] and out[0]["title"] != out[1]["title"]:
+            # raznye predmety v odnoy kletke - eto ne podgruppy, a predmety po vyboru (ED)
+            out[0]["option"], out[1]["option"] = 1, 2
+        else:
+            # odin predmet, dva prepodavatelya: sleva napravo = 1-ya, 2-ya (ugadyvaem po poryadku)
+            # vnimanie: poryadok ne vsegda verny (u 564-2 putalsya), nuzhny ruchnye popravki
+            out[0]["subgroup"], out[1]["subgroup"] = 1, 2
+            out[0]["subgroup_inferred"] = out[1]["subgroup_inferred"] = True
     return out
 
 
