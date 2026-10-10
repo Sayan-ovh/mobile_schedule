@@ -7,7 +7,7 @@
 #
 # zashchita ot porchi dannyh: esli stranitsa ne skachalas ili razobralas
 # zametno huzhe chem ranshe (par stalo namnogo menshe) - ostavlyaem staryy fayl
-import json, os, sys, time, datetime, traceback, urllib.request
+import json, os, re, sys, time, datetime, traceback, urllib.request
 from pathlib import Path
 from esstu_parser import parse_index, parse_group, BASE
 
@@ -34,6 +34,31 @@ def dump(obj) -> str:
     return json.dumps(obj, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
 
 
+def audit(lessons):
+    # ishchem podozritelnye pary: razbor ne upal, no rezultat mozhet byt krivym
+    # vozvrashchaet spisok (prichina, ishodnyy tekst kletki)
+    out = []
+    cells = {}
+    for l in lessons:
+        cells.setdefault((l["week"], l["day"], l["slot"], l["raw"]), []).append(l)
+    for (_, _, _, raw), ls in cells.items():
+        if len(ls) > 2:
+            out.append(("many_segments", raw))      # v kletke bolshe dvuh podgrupp
+    for l in lessons:
+        title = l.get("title") or ""
+        if l["kind"] != "other" and not l.get("teacher"):
+            out.append(("no_teacher", l["raw"]))
+        if len(title) < 3:
+            out.append(("no_title", l["raw"]))
+        elif re.search(r"п/г|а\.", title) or re.fullmatch(r"[\d\W]+", title):
+            out.append(("dirty_title", l["raw"]))   # v nazvanie popal musor
+        if l["kind"] == "other":
+            out.append(("kind_other", l["raw"]))    # net lek/lab/pr - smotrim kakie byvayut
+        if l.get("subgroup_inferred"):
+            out.append(("guessed_subgroups", l["raw"]))
+    return out
+
+
 def main() -> int:
     index = parse_index(fetch(BASE + "raspisan.htm")[0])
     if len(index) < 50:                             # stranitsa slomana - nichego ne trogaem
@@ -43,6 +68,7 @@ def main() -> int:
     (DATA / "groups").mkdir(parents=True, exist_ok=True)
     changed, failed, kept_old = [], [], []
     unparsed, inferred, equip_seen = [], 0, {}
+    sus = {}                                        # prichina -> {tekst kletki: [skolko grupp, primer]}
 
     for i, g in enumerate(index, 1):
         path = DATA / "groups" / f"{g['code']}.json"
@@ -73,6 +99,10 @@ def main() -> int:
             if l.get("equip"):
                 equip_seen[l["equip"]] = equip_seen.get(l["equip"], 0) + 1
 
+        for why, raw in set(audit(new["lessons"])):
+            rec = sus.setdefault(why, {}).setdefault(raw, [0, g["name"]])
+            rec[0] += 1
+
         if old is None or dump(old) != dump(new):
             path.write_text(dump(new), encoding="utf-8")
             changed.append(g["code"])
@@ -80,7 +110,11 @@ def main() -> int:
     ok = len(index) - len(failed)
     report = {"groups_total": len(index), "groups_ok": ok, "failed": failed,
               "kept_old_data": kept_old, "unparsed_cells": unparsed,
-              "subgroups_guessed_by_order": inferred, "equipment_codes": equip_seen}
+              "subgroups_guessed_by_order": inferred, "equipment_codes": equip_seen,
+              "suspicious": {why: {"distinct": len(d), "top": [
+                  {"raw": raw, "groups": v[0], "example": v[1]}
+                  for raw, v in sorted(d.items(), key=lambda kv: (-kv[1][0], kv[0]))[:40]]}
+                  for why, d in sorted(sus.items())}}
 
     # obschie fayly pishem tolko esli chto-to pomenyalos, chtoby ne plodit pustye kommity
     for name, obj in (("groups.json", index), ("report.json", report)):
