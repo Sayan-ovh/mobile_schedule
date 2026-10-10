@@ -1,16 +1,126 @@
 [
-  {"note": "564-2: praktika ED 3 po ponedelnikam u 2-y podgruppy (na sayte napisano 1 p/g)",
-   "group": "147", "match": {"kind": "practice", "title_contains": "Основы машинного обучения", "weekday": 1}, "set": {"subgroup": 2}},
-  {"note": "564-2: praktika ED 3 po sredam u 1-y podgruppy",
-   "group": "147", "match": {"kind": "practice", "title_contains": "Основы машинного обучения", "weekday": 3}, "set": {"subgroup": 1}},
-  {"note": "564-2: proektirovanie sistem - 1-ya podgruppa u Nikolaevoy",
-   "group": "147", "match": {"kind": "lab", "title": "Проектирование систем", "teacher": "НИКОЛАЕВА Т.В."}, "set": {"subgroup": 1, "subgroup_inferred": null}},
-  {"note": "564-2: proektirovanie sistem - 2-ya podgruppa u Sambueva",
-   "group": "147", "match": {"kind": "lab", "title": "Проектирование систем", "teacher": "САМБУЕВ Г.Ж."}, "set": {"subgroup": 2, "subgroup_inferred": null}},
-  {"note": "564-2: mobilnaya OS - 1-ya u Glushkovoy, 2-ya u Garmaeva (proverit po faktu)",
-   "group": "147", "match": {"kind": "lab", "title": "Мобильная операционная система", "teacher": "ГЛУШКОВА И.И."}, "set": {"subgroup": 1, "subgroup_inferred": null}},
-  {"note": "564-2: mobilnaya OS - 2-ya u Garmaeva",
-   "group": "147", "match": {"kind": "lab", "title": "Мобильная операционная система", "teacher": "ГАРМАЕВ Ч.Б."}, "set": {"subgroup": 2, "subgroup_inferred": null}},
-  {"note": "564-2: prepodavatel fizkultury (na sayte ne ukazan)",
-   "group": "147", "match": {"kind": "other", "title_contains": "ЭК по ФКС"}, "set": {"teacher": "СИМАГИН А.Ю."}}
+ {
+  "note": "564-2: praktika ED 3 po ponedelnikam u 2-y podgruppy (na sayte napisano 1 p/g)",
+  "group": "147",
+  "match": {
+   "kind": "practice",
+   "title_contains": "Основы машинного обучения",
+   "weekday": 1
+  },
+  "set": {
+   "subgroup": 2
+  }
+ },
+ {
+  "note": "564-2: praktika ED 3 po sredam u 1-y podgruppy",
+  "group": "147",
+  "match": {
+   "kind": "practice",
+   "title_contains": "Основы машинного обучения",
+   "weekday": 3
+  },
+  "set": {
+   "subgroup": 1
+  }
+ },
+ {
+  "note": "564-2: proektirovanie sistem - 1-ya podgruppa u Nikolaevoy",
+  "group": "147",
+  "match": {
+   "kind": "lab",
+   "title": "Проектирование систем",
+   "teacher": "НИКОЛАЕВА Т.В."
+  },
+  "set": {
+   "subgroup": 1,
+   "subgroup_inferred": null
+  }
+ },
+ {
+  "note": "564-2: proektirovanie sistem - 2-ya podgruppa u Sambueva",
+  "group": "147",
+  "match": {
+   "kind": "lab",
+   "title": "Проектирование систем",
+   "teacher": "САМБУЕВ Г.Ж."
+  },
+  "set": {
+   "subgroup": 2,
+   "subgroup_inferred": null
+  }
+ },
+ {
+  "note": "564-2: mobilnaya OS - 1-ya u Glushkovoy, 2-ya u Garmaeva (proverit po faktu)",
+  "group": "147",
+  "match": {
+   "kind": "lab",
+   "title": "Мобильная операционная система",
+   "teacher": "ГЛУШКОВА И.И."
+  },
+  "set": {
+   "subgroup": 1,
+   "subgroup_inferred": null
+  }
+ },
+ {
+  "note": "564-2: mobilnaya OS - 2-ya u Garmaeva",
+  "group": "147",
+  "match": {
+   "kind": "lab",
+   "title": "Мобильная операционная система",
+   "teacher": "ГАРМАЕВ Ч.Б."
+  },
+  "set": {
+   "subgroup": 2,
+   "subgroup_inferred": null
+  }
+ },
+ {
+  "note": "564-2: prepodavatel fizkultury (na sayte ne ukazan)",
+  "group": "147",
+  "match": {
+   "kind": "other",
+   "title_contains": "ЭК по ФКС"
+  },
+  "set": {
+   "teacher": "СИМАГИН А.Ю."
+  }
+ },
+ {
+  "note": "564-2: operatsionnye sistemy - 1-ya podgruppa u Glushkovoy",
+  "group": "147",
+  "match": {
+   "kind": "lab",
+   "title": "Операционные системы",
+   "teacher": "ГЛУШКОВА И.И."
+  },
+  "set": {
+   "subgroup": 1,
+   "subgroup_inferred": null
+  }
+ },
+ {
+  "note": "564-2: operatsionnye sistemy - 2-ya podgruppa u Garmaeva",
+  "group": "147",
+  "match": {
+   "kind": "lab",
+   "title": "Операционные системы",
+   "teacher": "ГАРМАЕВ Ч.Б."
+  },
+  "set": {
+   "subgroup": 2,
+   "subgroup_inferred": null
+  }
+ },
+ {
+  "note": "564-2: v zamorozhennyh dnyah ostalos 'dist.' - vozvrashchaem 'dist./ob.'",
+  "group": "147",
+  "match": {
+   "remote": true,
+   "room": "дист."
+  },
+  "set": {
+   "room": "дист./об."
+  }
+ }
 ]
