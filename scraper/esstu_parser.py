@@ -19,17 +19,21 @@ except ImportError:
 
 BASE = "https://portal.esstu.ru/bakalavriat/"
 KINDS = {"лек": "lecture", "лаб": "lab", "пр": "practice"}
-EQUIP = {"д/к": "display", "и/д": "board", "л": "lecture_hall", "и/п": "и/п"}   # "l" - bolshoy lektsionnyy kabinet; "i/p" - smysl ne znayu, ostavil kak est
+EQUIP = {"д/к": "display", "и/д": "board", "л": "lecture_hall", "и/п": "panel"}   # "l" - bolshoy lektsionnyy kabinet; "i/p" - interaktivnaya panel
 EMPTY = re.compile(r"^[\s_\-–—]*$")
 ONLINE = ("дист", "online", "онлайн")
 
 # primery: a.25-214 d/k | a.9-Sport1 | a.dist./ob. | a.25-115 l | a.640i/d (bez probela)
 # pered "a." ne dolzhno byt bukvy, inache lovim konets slova ("Elektronika. Kursovaya")
 ROOM = re.compile(r"(?<!\w)а\.\s*(\S+)(?:\s+(д/к|и/д|и/п|л)(?=[\s\-]|$))?")
-# FAMILIYA I.O. - inogda initsialy slepleny ("S.BM."), inogda pripisano "FIZ.", est i "VAKANSIYA"
-NAME = r"[А-ЯЁ]{2,}(?:-[А-ЯЁ]{2,})?\s+[А-ЯЁ]\.\s?[А-ЯЁ]{1,2}\."
-TEACHER = re.compile(rf"({NAME}|ВАКАНСИЯ)(?:[А-ЯЁ]{{2,}}\.|\s[А-ЯЁ]{{2,}})?\s*-?\s*$")
-TEACHER_ANY = re.compile(rf"({NAME}|ВАКАНСИЯ)(?:[А-ЯЁ]{{2,}}\.)?")
+# FAMILIYA I.O. - inogda initsialy slepleny ("S.BM."), bez tochki na kontse ("Yu.Yu"), pripisano "FIZ.",
+# est "VAKANSIYA KDT.VR" i inostrannye imena bez initsialov ("YuY HUNKAY")
+NAME = r"(?:[А-ЯЁ]{3,}\s+)?[А-ЯЁ]{2,}(?:-[А-ЯЁ]{2,})?\s+[А-ЯЁ]\.\s?[А-ЯЁ]{1,2}\.?"
+FOREIGN = r"[А-ЯЁ]{2,}\s+[А-ЯЁ]{3,}"
+# tri varianta v raznyh gruppah: obychnoe imya (+ pripiska), vakansiya (+ slovo), inostrannoe imya
+# vse berem v tochnosti kak na sayte - vmesto prepodavatelya tam byvayut raznye slova
+TEACHER = re.compile(rf"({NAME}(?:[А-ЯЁ]{{2,}}\.)?|ВАКАНСИЯ(?:\s[А-ЯЁ.]{{2,}})?|{FOREIGN})\s*-?\s*$")
+TEACHER_ANY = re.compile(rf"({NAME}(?:[А-ЯЁ]{{2,}}\.)?|ВАКАНСИЯ)")
 SUBGROUP = re.compile(r"\s*-\s*(\d)\s*п/г\s*$")
 
 
@@ -93,6 +97,8 @@ def _head(seg: str):
     tm = TEACHER.search(seg)
     if tm:
         teacher = re.sub(r"\s+", " ", tm.group(1))
+        if re.search(r"\s[А-ЯЁ]\.\s?[А-ЯЁ]{1,2}$", teacher):
+            teacher += "."                            # "SHURYGINA Yu.Yu" -> "Yu.Yu."
         seg = seg[:tm.start()].strip()
     sub, explicit = None, False
     sm = SUBGROUP.search(seg)

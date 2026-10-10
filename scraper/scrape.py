@@ -75,6 +75,7 @@ def main() -> int:
     (DATA / "groups").mkdir(parents=True, exist_ok=True)
     changed, failed, kept_old = [], [], []
     unparsed, inferred, equip_seen = [], 0, {}
+    equip_examples = {}                             # kod oborudovaniya -> neskolko primerov kletok
     streak, ok_count = 0, 0                         # oshibok podryad / uspeshno razobrannyh grupp
     sus = {}                                        # prichina -> {tekst kletki: [skolko grupp, primer]}
 
@@ -112,6 +113,9 @@ def main() -> int:
             inferred += bool(l.get("subgroup_inferred"))
             if l.get("equip"):
                 equip_seen[l["equip"]] = equip_seen.get(l["equip"], 0) + 1
+                ex = equip_examples.setdefault(l["equip"], [])
+                if len(ex) < 3 and l["raw"] not in ex:
+                    ex.append(l["raw"])
 
         for why, raw in set(audit(new["lessons"])):
             rec = sus.setdefault(why, {}).setdefault(raw, [0, g["name"]])
@@ -127,7 +131,7 @@ def main() -> int:
         return 1
     report = {"groups_total": len(index), "groups_ok": ok, "failed": failed, "not_checked": len(index) - ok - len(failed),
               "kept_old_data": kept_old, "unparsed_cells": unparsed,
-              "subgroups_guessed_by_order": inferred, "equipment_codes": equip_seen,
+              "subgroups_guessed_by_order": inferred, "equipment_codes": equip_seen, "equipment_examples": equip_examples,
               "suspicious": {why: {"distinct": len(d), "top": [
                   {"raw": raw, "groups": v[0], "example": v[1]}
                   for raw, v in sorted(d.items(), key=lambda kv: (-kv[1][0], kv[0]))[:40]]}
