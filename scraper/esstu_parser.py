@@ -86,7 +86,7 @@ def _room(token: str, equip: str | None):
             token, equip = token[:-len(code)], equip or code
     eq = EQUIP.get(equip, equip) if equip else None
     if token.lower().startswith(ONLINE):
-        return {"building": None, "room": "дист.", "remote": True, "equip": eq}
+        return {"building": None, "room": token, "remote": True, "equip": eq}
     b, _, r = token.partition("-")
     return {"building": b if r else None, "room": r or b, "remote": False, "equip": eq}
 
