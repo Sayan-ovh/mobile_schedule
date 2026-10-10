@@ -2,6 +2,10 @@ name: scrape
 
 on:
   workflow_dispatch:          # knopka "Run workflow" vruchnuyu
+  push:                       # pravka popravok ili kalendarya - pereschet po datam bez zahoda na sayt
+    paths:
+      - "scraper/overrides.json"
+      - "scraper/calendar.json"
   # kogda pervyy zapusk projdet uspeshno, raskommentiruyte dve stroki nizhe -
   # togda raspisanie budet obnovlyatsya samo (seychas raz v chas, mozhno reze):
   # schedule:
@@ -22,7 +26,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r scraper/requirements.txt
-      - run: python scraper/scrape.py
+      - run: python scraper/scrape.py ${{ github.event_name == 'push' && '--build-only' || '' }}
       - name: Save data
         if: always()
         run: |
