@@ -10,6 +10,7 @@
 import json, os, re, sys, time, datetime, traceback, urllib.request
 from pathlib import Path
 from esstu_parser import parse_index, parse_group, BASE
+from build_dates import build_all
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 UA = "Mozilla/5.0 (compatible; student-schedule-project)"
@@ -62,6 +63,11 @@ def audit(lessons):
 
 
 def main() -> int:
+    if "--build-only" in sys.argv:                  # tolko pereschet po datam, sayt ne trogaem
+        st = build_all()
+        print(f"Расписание по датам: файлов обновлено {st['groups_written']}, дней {st['days_total']}, "
+              f"правил поправок без совпадений {st['overrides_without_match']}")
+        return 0
     try:
         index = parse_index(fetch(BASE + "raspisan.htm")[0])
     except Exception as e:                          # noqa: BLE001
@@ -129,6 +135,9 @@ def main() -> int:
     if ok < 0.8 * len(index):                       # progon neudachnyy - report i status ne perezapisyvaem
         print(f"Разобрано только {ok} из {len(index)} групп, общий отчёт не обновляю.")
         return 1
+    build_stats = build_all()                       # rasklad po datam, poka dannye svezhie
+    changed.extend(f"schedule/{c}" for c in build_stats.pop("written"))
+    build_stats.pop("today")                        # data menyaetsya kazhdyy den - v otchet ne kladem
     report = {"groups_total": len(index), "groups_ok": ok, "failed": failed, "not_checked": len(index) - ok - len(failed),
               "kept_old_data": kept_old, "unparsed_cells": unparsed,
               "subgroups_guessed_by_order": inferred, "equipment_codes": equip_seen, "equipment_examples": equip_examples,
@@ -137,6 +146,7 @@ def main() -> int:
                   for raw, v in sorted(d.items(), key=lambda kv: (-kv[1][0], kv[0]))[:40]]}
                   for why, d in sorted(sus.items())}}
 
+    report["build"] = build_stats
     # obschie fayly pishem tolko esli chto-to pomenyalos, chtoby ne plodit pustye kommity
     for name, obj in (("groups.json", index), ("report.json", report)):
         p = DATA / name
