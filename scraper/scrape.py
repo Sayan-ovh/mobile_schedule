@@ -64,7 +64,7 @@ def audit(lessons):
 
 def main() -> int:
     if "--build-only" in sys.argv:                  # tolko pereschet po datam, sayt ne trogaem
-        st = build_all()
+        st = build_all(rebase="--rebase" in sys.argv)
         print(f"Расписание по датам: файлов обновлено {st['groups_written']}, дней {st['days_total']}, "
               f"правил поправок без совпадений {st['overrides_without_match']}")
         return 0
@@ -135,7 +135,7 @@ def main() -> int:
     if ok < 0.8 * len(index):                       # progon neudachnyy - report i status ne perezapisyvaem
         print(f"Разобрано только {ok} из {len(index)} групп, общий отчёт не обновляю.")
         return 1
-    build_stats = build_all()                       # rasklad po datam, poka dannye svezhie
+    build_stats = build_all(rebase="--rebase" in sys.argv)   # rasklad po datam, poka dannye svezhie
     changed.extend(f"schedule/{c}" for c in build_stats.pop("written"))
     build_stats.pop("today")                        # data menyaetsya kazhdyy den - v otchet ne kladem
     report = {"groups_total": len(index), "groups_ok": ok, "failed": failed, "not_checked": len(index) - ok - len(failed),

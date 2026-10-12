@@ -8,10 +8,13 @@
 #   - schitaem tolko semestr, v kotoryy segodnya popadaet (inache podstavili by staroe raspisanie)
 #   - popravki iz overrides.json nakladyvayutsya na vse dni, vklyuchaya zamorozhennye
 #   - esli bazovoe raspisanie budushchego dnya izmenilos - zapisyvaem datu v changes
+#   - posle pravki parsera zapuskaem s --rebase: otpechatki pereschityvayutsya, a metki "izmeneno" ne stavyatsya
+#     (inache izmenenie formata zapisi sluchayno vyglyadit kak izmenenie raspisaniya vuza)
 import datetime as dt
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -101,7 +104,7 @@ def apply_overrides(lessons, day, wt, code, name, rules, hits):
     return out
 
 
-def build_group(code, tmpl, old, cfg, rules, today, hits):
+def build_group(code, tmpl, old, cfg, rules, today, hits, rebase=False):
     name = tmpl.get("name") or tmpl.get("group")
     old = old or {}
     old_days, old_hash = old.get("days", {}), old.get("base_hash", {})
@@ -131,12 +134,12 @@ def build_group(code, tmpl, old, cfg, rules, today, hits):
                 h = hashlib.sha1(_dump(base).encode()).hexdigest()[:8]
                 days[ds] = apply_overrides(base, day, wt, code, name, rules, hits)
                 base_hash[ds] = h
-                if day >= today and ds in old_hash and old_hash[ds] != h:
+                if not rebase and day >= today and ds in old_hash and old_hash[ds] != h:
                     changes[ds] = today.isoformat()     # shablon dlya etogo dnya pomenyalsya
             day += dt.timedelta(days=1)
 
     # starye pometki "izmeneno" derzhim, poka den ne ushel v proshloe
-    for ds, when in old.get("changes", {}).items():
+    for ds, when in ({} if rebase else old.get("changes", {})).items():     # pri --rebase stirayutsya i starye lozhnye metki
         if _d(ds) >= today and ds not in changes:
             changes[ds] = when
 
@@ -145,7 +148,7 @@ def build_group(code, tmpl, old, cfg, rules, today, hits):
             "days": days, "base_hash": base_hash, "changes": changes}
 
 
-def build_all(today=None, data_dir=DATA):
+def build_all(today=None, data_dir=DATA, rebase=False):
     cfg = _load(HERE / "calendar.json", None)
     rules = _load(HERE / "overrides.json", [])
     today = today or today_local(cfg)
@@ -158,7 +161,7 @@ def build_all(today=None, data_dir=DATA):
         code = path.stem
         target = out_dir / f"{code}.json"
         old = _load(target, None)
-        new = build_group(code, tmpl, old, cfg, rules, today, hits)
+        new = build_group(code, tmpl, old, cfg, rules, today, hits, rebase)
         n_days += len(new["days"])
         n_changes += sum(1 for ds in new["changes"] if new["changes"][ds] == today.isoformat())
         if old is None or _dump(old) != _dump(new):
@@ -172,6 +175,6 @@ def build_all(today=None, data_dir=DATA):
 
 
 if __name__ == "__main__":
-    s = build_all()
+    s = build_all(rebase="--rebase" in sys.argv)
     print(f"Расписание по датам: файлов обновлено {s['groups_written']}, дней {s['days_total']}, "
           f"изменений сегодня {s['changed_today']}, правил поправок без совпадений {s['overrides_without_match']}")
