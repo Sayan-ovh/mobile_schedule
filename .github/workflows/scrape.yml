@@ -2,6 +2,11 @@ name: scrape
 
 on:
   workflow_dispatch:          # knopka "Run workflow" vruchnuyu
+    inputs:
+      rebase:
+        description: "Pereschitat otpechatki bez metok izmeneno (posle pravki parsera)"
+        type: boolean
+        default: false
   push:                       # pravka popravok ili kalendarya - pereschet po datam bez zahoda na sayt
     paths:
       - "scraper/overrides.json"
@@ -26,7 +31,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r scraper/requirements.txt
-      - run: python scraper/scrape.py ${{ github.event_name == 'push' && '--build-only' || '' }}
+      - run: python scraper/scrape.py ${{ github.event_name == 'push' && '--build-only' || '' }} ${{ inputs.rebase && '--rebase' || '' }}
       - name: Save data
         if: always()
         run: |
