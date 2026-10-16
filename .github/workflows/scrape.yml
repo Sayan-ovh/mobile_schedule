@@ -7,14 +7,16 @@ on:
         description: "Pereschitat otpechatki bez metok izmeneno (posle pravki parsera)"
         type: boolean
         default: false
+      build_only:
+        description: "Tolko pereschet po datam, na sayt vuza ne hodit"
+        type: boolean
+        default: false
   push:                       # pravka popravok ili kalendarya - pereschet po datam bez zahoda na sayt
     paths:
       - "scraper/overrides.json"
       - "scraper/calendar.json"
-  # kogda pervyy zapusk projdet uspeshno, raskommentiruyte dve stroki nizhe -
-  # togda raspisanie budet obnovlyatsya samo (seychas raz v chas, mozhno reze):
-  # schedule:
-  #   - cron: "17 * * * *"
+  schedule:                   # cron v UTC, Ulan-Ude = UTC+8: 02:17, 06:17, 09:17, 12:17, 15:17, 18:17, 22:17
+    - cron: "17 18,22,1,4,7,10,14 * * *"
 
 permissions:
   contents: write
@@ -31,7 +33,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r scraper/requirements.txt
-      - run: python scraper/scrape.py ${{ github.event_name == 'push' && '--build-only' || '' }} ${{ inputs.rebase && '--rebase' || '' }}
+      - run: python scraper/scrape.py ${{ (github.event_name == 'push' || inputs.build_only) && '--build-only' || '' }} ${{ inputs.rebase && '--rebase' || '' }}
       - name: Save data
         if: always()
         run: |
