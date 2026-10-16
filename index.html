@@ -108,7 +108,7 @@ const isRemote=t=>/^(дист|online|онлайн)/i.test(t);
 const locText=x=>{if(x.remote)return"дист./об.";const[b,r]=place(x.building,x.room);return b?`${b}-${r}`:r};
 const roomTok=t=>{if(isRemote(t))return"дист./об.";const p=t.replace(/-$/,"").split("-"),[b,r]=p.length>1?place(p[0],p[1]):place("",p[0]);return b?`${b}-${r}`:r};
 // schetchik poseshchaemosti GoatCounter: vpishite svoy kod (to, chto stoit pered .goatcounter.com), chtoby vklyuchit
-const GC="";
+const GC="kyousuke666";
 if(GC){const sc=document.createElement("script");sc.async=true;sc.dataset.goatcounter=`https://${GC}.goatcounter.com/count`;sc.src="//gc.zgo.at/count.js";document.head.appendChild(sc)}
 
 let FAV=null;try{FAV=JSON.parse(localStorage.getItem("fav")||"null")}catch(e){}
