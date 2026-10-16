@@ -96,6 +96,21 @@ const TK={"ЧИМИТОВА Е.Г.":"c","САМБУЕВ Г.Ж.":"s","ШАЙДО�
 const FALLBACK={semesters:[{week1_monday:"2026-08-31",first_day:"2026-09-01",last_day:"2026-12-31",week1_type:1},{week1_monday:"2027-01-25",first_day:"2027-01-25",last_day:"2027-06-01",week1_type:1}],days_off:{}};
 const $=id=>document.getElementById(id),pad=n=>String(n).padStart(2,"0");
 const E=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+// kabinety v raspisanii pishut po-raznomu: "25-214" (korpus-kabinet), "726-3" (kabinet-korpus),
+// "8409" / "714" (pervaya tsifra - korpus), "0428" (0 = 10-y korpus). to, chto ne podhodit pod pravila, ostavlyaem kak est
+function place(b,r){
+  b=b==null?"":String(b);r=r==null?"":String(r);
+  if(b&&/^\d{3,}$/.test(b)&&/^\d{1,2}$/.test(r))return[r,b];
+  if(!b){let m=r.match(/^0(\d{3}.*)$/);if(m)return["10",m[1]];m=r.match(/^([78])(\d{2,}.*)$/);if(m)return[m[1],m[2]]}
+  return[b,r];
+}
+const isRemote=t=>/^(дист|online|онлайн)/i.test(t);
+const locText=x=>{if(x.remote)return"дист./об.";const[b,r]=place(x.building,x.room);return b?`${b}-${r}`:r};
+const roomTok=t=>{if(isRemote(t))return"дист./об.";const p=t.replace(/-$/,"").split("-"),[b,r]=p.length>1?place(p[0],p[1]):place("",p[0]);return b?`${b}-${r}`:r};
+// schetchik poseshchaemosti GoatCounter: vpishite svoy kod (to, chto stoit pered .goatcounter.com), chtoby vklyuchit
+const GC="";
+if(GC){const sc=document.createElement("script");sc.async=true;sc.dataset.goatcounter=`https://${GC}.goatcounter.com/count`;sc.src="//gc.zgo.at/count.js";document.head.appendChild(sc)}
+
 let FAV=null;try{FAV=JSON.parse(localStorage.getItem("fav")||"null")}catch(e){}
 let CAL,SEM,TOTAL=1,W1=0,G=null,GR=[],code="",wk=1,sub=0,pLock=0,LS=[];
 try{code=localStorage.getItem("grp")||"";sub=+localStorage.getItem("sub")||0}catch(e){}
@@ -122,7 +137,7 @@ function setSem(s){
 }
 function card(x,t){
   const st=at(t,x.slot),en=at(t,x.slot,1),now=Date.now(),pa=now>=en,cu=!pa&&now>=st,k=K[x.kind]||K.other,i=LS.push({x,t})-1;
-  const loc=x.complex?"несколько кабинетов":x.kind=="other"&&/^Спорт/.test(x.room||"")?"спорткомплекс":x.remote?x.room:x.building?`${x.building}-${x.room}`:(x.room||"");
+  const loc=x.complex?"несколько кабинетов":x.kind=="other"&&/^Спорт/.test(x.room||"")?"спорткомплекс":locText(x);
   const mid=x.option?"По выбору":x.subgroup?`Подгруппа №${x.subgroup}${x.subgroup_inferred?"?":""}`:"";
   return `<div class="card ${pa?"past":""} ${cu?"cur":""}" style="--k:${k[1]}" onclick="info(${i})">
   <div class="r1"><span class="n">${x.slot}</span><span class="t">${lab(x.slot)}</span><span class="sp"></span>${mid?`<span>${mid}</span><span class="sp"></span>`:""}${x.teacher&&x.kind!="other"?`<span class="pr">${E(fmtN(x.teacher))}</span>`:""}</div>
@@ -171,7 +186,7 @@ function info(i){
   openSheet((k[0]?`<span class="tag">${k[0]}</span>`:"")+`<h2>${E(x.title)}</h2>`+tc
    +(x.complex?r("Как написано на сайте",`<pre class="raw">${E(x.raw)}</pre>`):"")
    +r("Дата",ds)+r("Время",`${lab(x.slot)} · ${x.slot}-я пара`)
-   +(x.complex?r("Кабинеты",E((x.rooms||[]).join(", "))):(x.building?r("Корпус",E(x.building)):"")+r("Кабинет",E(x.room||"—")))
+   +(x.complex?r("Кабинеты",E((x.rooms||[]).map(roomTok).join(", "))):((p)=>(p[0]?r("Корпус",E(p[0])):"")+r("Кабинет",E(p[1]||"—")))(x.remote?["","дист./об."]:place(x.building,x.room)))
    +(x.equip?r("Оснащение",EQ[x.equip]||E(x.equip)):"")
    +(x.subgroup?r("Подгруппа","№"+x.subgroup+(x.subgroup_inferred?" (определена по порядку записи, может быть неточно)":"")):"")
    +(x.option?r("Выбор","Один из предметов по выбору"):""));
