@@ -97,19 +97,19 @@ const FALLBACK={semesters:[{week1_monday:"2026-08-31",first_day:"2026-09-01",las
 const $=id=>document.getElementById(id),pad=n=>String(n).padStart(2,"0");
 const E=s=>String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 // kabinety v raspisanii pishut po-raznomu: "25-214" (korpus-kabinet), "726-3" (kabinet-korpus),
-// "8409" / "714" (pervaya tsifra - korpus), "0428" (0 = 10-y korpus). to, chto ne podhodit pod pravila, ostavlyaem kak est
+// "8409" (8 = korpus), "0428" (0 = 10-y korpus). nomera na 6, 7, 9 i vse, chto ne podhodit pod pravila, ostavlyaem kak est
 function place(b,r){
   b=b==null?"":String(b);r=r==null?"":String(r);
   if(b&&/^\d{3,}$/.test(b)&&/^\d{1,2}$/.test(r))return[r,b];
-  if(!b){let m=r.match(/^0(\d{3}.*)$/);if(m)return["10",m[1]];m=r.match(/^([78])(\d{2,}.*)$/);if(m)return[m[1],m[2]]}
+  if(!b){let m=r.match(/^0(\d{3}.*)$/);if(m)return["10",m[1]];m=r.match(/^(8)(\d{2,}.*)$/);if(m)return[m[1],m[2]]}
   return[b,r];
 }
 const isRemote=t=>/^(дист|online|онлайн)/i.test(t);
 const locText=x=>{if(x.remote)return"дист./об.";const[b,r]=place(x.building,x.room);return b?`${b}-${r}`:r};
 const roomTok=t=>{if(isRemote(t))return"дист./об.";const p=t.replace(/-$/,"").split("-"),[b,r]=p.length>1?place(p[0],p[1]):place("",p[0]);return b?`${b}-${r}`:r};
-// schetchik poseshchaemosti GoatCounter: vpishite svoy kod (to, chto stoit pered .goatcounter.com), chtoby vklyuchit
-const GC="kyousuke666";
-if(GC){const sc=document.createElement("script");sc.async=true;sc.dataset.goatcounter=`https://${GC}.goatcounter.com/count`;sc.src="//gc.zgo.at/count.js";document.head.appendChild(sc)}
+// schetchik poseshchaemosti Yandex.Metrika (rabotaet v Rossii): vpishite nomer schetchika vmesto 0, chtoby vklyuchit
+const YM=0;
+if(YM){(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");ym(YM,"init",{clickmap:false,trackLinks:false,accurateTrackBounce:true,webvisor:false})}
 
 let FAV=null;try{FAV=JSON.parse(localStorage.getItem("fav")||"null")}catch(e){}
 let CAL,SEM,TOTAL=1,W1=0,G=null,GR=[],code="",wk=1,sub=0,pLock=0,LS=[];
