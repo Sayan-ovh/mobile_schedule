@@ -73,7 +73,7 @@ def main() -> int:
     except Exception as e:                          # noqa: BLE001
         print(f"Не удалось открыть главную страницу портала: {e!r}")
         print("Данные в репозитории не тронуты, можно просто запустить позже.")
-        return 1
+        return 0
     if len(index) < 50:                             # stranitsa slomana - nichego ne trogaem
         print(f"ОШИБКА: на главной найдено только {len(index)} групп, прерываю")
         return 1
